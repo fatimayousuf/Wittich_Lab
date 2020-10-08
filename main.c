@@ -1,33 +1,8 @@
-//*****************************************************************************
-//
-// hello.c - Simple hello world example.
-//
-// Copyright (c) 2012-2017 Texas Instruments Incorporated.  All rights reserved.
-// Software License Agreement
-//
-// Texas Instruments (TI) is supplying this software for use solely and
-// exclusively on TI's microcontroller products. The software is owned by
-// TI and/or its suppliers, and is protected under applicable copyright
-// laws. You may not combine this software with "viral" open-source
-// software in order to form a larger program.
-//
-// THIS SOFTWARE IS PROVIDED "AS IS" AND WITH ALL FAULTS.
-// NO WARRANTIES, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT
-// NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. TI SHALL NOT, UNDER ANY
-// CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
-// DAMAGES, FOR ANY REASON WHATSOEVER.
-//
-// This is part of revision 2.1.4.178 of the EK-TM4C123GXL Firmware Package.
-//
-//*****************************************************************************
-
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
 #include "inc/hw_ints.h"
-#include "driverlib/debug.h"
 #include "driverlib/fpu.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
@@ -35,21 +10,57 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
-#include "utils/uartstdio.c"
-#include "inc/bsp.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
+#include "sensor_task.h"
+#include "switch_sensor_task.h"
 
 //*****************************************************************************
 //
 //! \addtogroup example_list
-//! <h1>Hello World (hello)</h1>
+//! <h1>FreeRTOS Example (freertos_demo)</h1>
 //!
-//! A very simple ``hello world'' example.  It simply displays ``Hello World!''
-//! on the UART and is a starting point for more complicated applications.
+//! This application demonstrates the use of FreeRTOS on Launchpad.
 //!
-//! UART0, connected to the Virtual Serial Port and running at
-//! 115,200, 8-N-1, is used to display messages from this application.
+//! The application blinks the user-selected LED at a user-selected frequency.
+//! To select the LED press the left button and to select the frequency press
+//! the right button.  The UART outputs the application status at 115,200 baud,
+//! 8-n-1 mode.
+//!
+//! This application utilizes FreeRTOS to perform the tasks in a concurrent
+//! fashion.  The following tasks are created:
+//!
+//! - An LED task, which blinks the user-selected on-board LED at a
+//!   user-selected rate (changed via the buttons).
+//!
+//! - A Switch task, which monitors the buttons pressed and passes the
+//!   information to LED task.
+//!
+//! In addition to the tasks, this application also uses the following FreeRTOS
+//! resources:
+//!
+//! - A Queue to enable information transfer between tasks.
+//!
+//! - A Semaphore to guard the resource, UART, from access by multiple tasks at
+//!   the same time.
+//!
+//! - A non-blocking FreeRTOS Delay to put the tasks in blocked state when they
+//!   have nothing to do.
+//!
+//! For additional details on FreeRTOS, refer to the FreeRTOS web page at:
+//! http://www.freertos.org/
 //
 //*****************************************************************************
+
+
+//*****************************************************************************
+//
+// The mutex that protects concurrent access of UART from multiple tasks.
+//
+//*****************************************************************************
+xSemaphoreHandle g_pUARTSemaphore;
 
 //*****************************************************************************
 //
@@ -61,17 +72,34 @@ void
 __error__(char *pcFilename, uint32_t ui32Line)
 {
 }
+
 #endif
 
-//void BSP_Accelerometer_Input(uint16_t *x, uint16_t *y, uint16_t *z);
-//void BSP_Accelerometer_Init(void);
+//*****************************************************************************
+//
+// This hook is called by FreeRTOS when an stack overflow error is detected.
+//
+//*****************************************************************************
+void
+vApplicationStackOverflowHook(xTaskHandle *pxTask, char *pcTaskName)
+{
+    //
+    // This function can not return, so loop forever.  Interrupts are disabled
+    // on entry to this function, so no processor interrupts will interrupt
+    // this loop.
+    //
+    while(1)
+    {
+    }
+}
 
 //*****************************************************************************
 //
 // Configure the UART and its pins.  This must be called before UARTprintf().
 //
 //*****************************************************************************
-void ConfigureUART(void)
+void
+ConfigureUART(void)
 {
     //
     // Enable the GPIO Peripheral used by the UART.
@@ -103,88 +131,56 @@ void ConfigureUART(void)
 
 //*****************************************************************************
 //
-// Print "Hello World!" to the UART on the evaluation board.
+// Initialize FreeRTOS and start the initial set of tasks.
 //
 //*****************************************************************************
-int main(void)
+int
+main(void)
 {
-    //volatile uint32_t ui32Loop;
-
     //
-    // Enable lazy stacking for interrupt handlers.  This allows floating-point
-    // instructions to be used within interrupt handlers, but at the expense of
-    // extra stack usage.
-    //
-    ROM_FPULazyStackingEnable();
-
-    //
-    // Set the clocking to run directly from the crystal.
+    // Set the clocking to run at 50 MHz from the PLL.
     //
     ROM_SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
                        SYSCTL_OSC_MAIN);
 
     //
-    // Enable the GPIO port that is used for the on-board LED.
-    //
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-
-    //
-    // Enable the GPIO pins for the LED (PF2 & PF3).
-    //
-    ROM_GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_2);
-
-    //
-    // Initialize the UART.
+    // Initialize the UART and configure it for 115,200, 8-N-1 operation.
     //
     ConfigureUART();
 
     //
-    // Hello!
+    // Print demo introduction.
     //
-    UARTprintf("Hello, world!\n");
-
-    // BSP_Accelerometer_Init();
-    BSP_LightSensor_Init();
+    UARTprintf("\n\nSensor Demo\n");
 
     //
-    // We are finished.  Hang around doing nothing.
+    // Create a mutex to guard the UART.
     //
+    g_pUARTSemaphore = xSemaphoreCreateMutex();
+
+    // Create the switch task
+    if(SensorTaskInit() != 0)
+    {
+        while(1) { }
+    }
+
+    // Create the sensor task.
+    if(SwitchSensorTaskInit() != 0)
+    {
+        while(1) { }
+    }
+
+    //
+    // Start the scheduler.  This should not return.
+    //
+    vTaskStartScheduler();
+
+    //
+    // In case the scheduler returns for some reason, print an error and loop
+    // forever.
+    //
+
     while(1)
     {
-        //
-        // Turn on the BLUE LED.
-        //
-        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2);
-
-        //
-        // Delay for a bit.
-        //
-        SysCtlDelay(SysCtlClockGet() / 10 / 3);
-
-        //
-        // Turn off the BLUE LED.
-        //
-        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
-
-        //
-        // Delay for a bit.
-        //
-        SysCtlDelay(SysCtlClockGet() / 10 / 3);
-
-        // uint16_t x,y,z;
-        // BSP_Accelerometer_Input(&x, &y, &z);
-        // UARTprintf("xyz = %d %d %d\n", x,y,z);
-
-        uint32_t light;
-        BSP_LightSensor_Start();
-        SysCtlDelay(SysCtlClockGet());
-
-        int complete = BSP_LightSensor_End(&light);
-        while (complete == 0) {
-            SysCtlDelay(SysCtlClockGet());
-            complete = BSP_LightSensor_End(&light);
-            // stuck here
-        }
-        UARTprintf("light = %d\n", light);
     }
 }

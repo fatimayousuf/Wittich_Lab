@@ -8,6 +8,8 @@
 #ifndef INC_BSP_H_
 #define INC_BSP_H_
 
+// BSP Timer
+void BSP_Clock_InitFastest(void);
 
 // Accelerometer
 static void  adcinit(void);

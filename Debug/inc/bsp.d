@@ -11,7 +11,7 @@ inc/bsp.obj: /Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/i
 inc/bsp.obj: /Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/include/machine/_types.h
 inc/bsp.obj: /Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/include/machine/_stdint.h
 inc/bsp.obj: /Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/include/sys/_stdint.h
-inc/bsp.obj: /Users/fatimayousuf/workspace_v10/hello2/inc/tm4c123gh6pm.h
+inc/bsp.obj: /Users/fatimayousuf/workspace_v10/sensor_demo/inc/tm4c123gh6pm.h
 inc/bsp.obj: ../inc/bsp.h
 
 ../inc/bsp.c: 
@@ -25,5 +25,5 @@ inc/bsp.obj: ../inc/bsp.h
 /Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/include/machine/_types.h: 
 /Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/include/machine/_stdint.h: 
 /Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/include/sys/_stdint.h: 
-/Users/fatimayousuf/workspace_v10/hello2/inc/tm4c123gh6pm.h: 
+/Users/fatimayousuf/workspace_v10/sensor_demo/inc/tm4c123gh6pm.h: 
 ../inc/bsp.h: 

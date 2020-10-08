@@ -9,9 +9,20 @@ GEN_CMDS__FLAG :=
 
 ORDERED_OBJS += \
 "./main.obj" \
-"./tm4c123gh6pm_startup_ccs.obj" \
+"./sensor_task.obj" \
+"./startup_ccs.obj" \
+"./switch_sensor_task.obj" \
+"./drivers/buttons.obj" \
 "./inc/bsp.obj" \
-"../tm4c123gh6pm.cmd" \
+"./third_party/FreeRTOS/Source/list.obj" \
+"./third_party/FreeRTOS/Source/queue.obj" \
+"./third_party/FreeRTOS/Source/tasks.obj" \
+"./third_party/FreeRTOS/Source/portable/CCS/ARM_CM4F/port.obj" \
+"./third_party/FreeRTOS/Source/portable/CCS/ARM_CM4F/portasm.obj" \
+"./third_party/FreeRTOS/Source/portable/MemMang/heap_2.obj" \
+"./utils/uartstdio.obj" \
+"./utils/ustdlib.obj" \
+"../freertos_demo_ccs.cmd" \
 $(GEN_CMDS__FLAG) \
 -llibc.a \
 -l"/Users/fatimayousuf/ti/tivaware_c_series_2_1_4_178/driverlib/ccs/Debug/driverlib.lib" \
@@ -24,9 +35,19 @@ RMDIR := rm -rf
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include subdir_vars.mk
+-include drivers/subdir_vars.mk
 -include inc/subdir_vars.mk
+-include third_party/FreeRTOS/Source/subdir_vars.mk
+-include third_party/FreeRTOS/Source/portable/CCS/ARM_CM4F/subdir_vars.mk
+-include third_party/FreeRTOS/Source/portable/MemMang/subdir_vars.mk
+-include utils/subdir_vars.mk
 -include subdir_rules.mk
+-include drivers/subdir_rules.mk
 -include inc/subdir_rules.mk
+-include third_party/FreeRTOS/Source/subdir_rules.mk
+-include third_party/FreeRTOS/Source/portable/CCS/ARM_CM4F/subdir_rules.mk
+-include third_party/FreeRTOS/Source/portable/MemMang/subdir_rules.mk
+-include utils/subdir_rules.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)
@@ -123,43 +144,49 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXE_OUTPUTS += \
-hello2.out \
+sensor_demo.out \
 
 EXE_OUTPUTS__QUOTED += \
-"hello2.out" \
+"sensor_demo.out" \
 
 BIN_OUTPUTS += \
-hello2.hex \
+sensor_demo.bin \
 
 BIN_OUTPUTS__QUOTED += \
-"hello2.hex" \
+"sensor_demo.bin" \
 
 
 # All Target
-all: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
-	@$(MAKE) --no-print-directory -Onone "hello2.out"
+all: sensor_demo.out
 
 # Tool invocations
-hello2.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
+sensor_demo.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: "$@"'
 	@echo 'Invoking: ARM Linker'
-	"/Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me --define=ccs="ccs" --define=TARGET_IS_TM4C123_RB1 --define=PART_TM4C123GH6PM -g --gcc --diag_warning=225 --diag_wrap=off --display_error_number --abi=eabi -z -m"hello2.map" --heap_size=0 --stack_size=512 -i"/Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/lib" -i"/Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="hello2_linkInfo.xml" --rom_model -o "hello2.out" $(ORDERED_OBJS)
+	"/Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 --abi=eabi -me -O2 --advice:power=all -g --gcc --define=ccs="ccs" --define=PART_TM4C123GH6PM --define=TARGET_IS_TM4C123_RB1 --diag_warning=225 --diag_wrap=off --display_error_number --gen_func_subsections=on --ual -z -m"freertos_demo_ccs.map" --stack_size=512 --heap_size=0 -i"/Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/lib" -i"/Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/include" --reread_libs --diag_wrap=off --display_error_number --warn_sections --xml_link_info="sensor_demo_linkInfo.xml" --rom_model -o "sensor_demo.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
+	@$(MAKE) --no-print-directory post-build
 
-hello2.hex: $(EXE_OUTPUTS)
+sensor_demo.bin: $(EXE_OUTPUTS)
 	@echo 'Building files: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo 'Invoking: ARM Hex Utility'
-	"/Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/bin/armhex"  -o "hello2.hex" $(EXE_OUTPUTS__QUOTED)
+	"/Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/bin/armhex"  -o "sensor_demo.bin" $(EXE_OUTPUTS__QUOTED)
 	@echo 'Finished building: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo ' '
+	@$(MAKE) --no-print-directory post-build
 
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "main.obj" "tm4c123gh6pm_startup_ccs.obj" "inc/bsp.obj" 
-	-$(RM) "main.d" "tm4c123gh6pm_startup_ccs.d" "inc/bsp.d" 
+	-$(RM) "main.obj" "sensor_task.obj" "startup_ccs.obj" "switch_sensor_task.obj" "drivers/buttons.obj" "inc/bsp.obj" "third_party/FreeRTOS/Source/list.obj" "third_party/FreeRTOS/Source/queue.obj" "third_party/FreeRTOS/Source/tasks.obj" "third_party/FreeRTOS/Source/portable/CCS/ARM_CM4F/port.obj" "third_party/FreeRTOS/Source/portable/CCS/ARM_CM4F/portasm.obj" "third_party/FreeRTOS/Source/portable/MemMang/heap_2.obj" "utils/uartstdio.obj" "utils/ustdlib.obj" 
+	-$(RM) "main.d" "sensor_task.d" "startup_ccs.d" "switch_sensor_task.d" "drivers/buttons.d" "inc/bsp.d" "third_party/FreeRTOS/Source/list.d" "third_party/FreeRTOS/Source/queue.d" "third_party/FreeRTOS/Source/tasks.d" "third_party/FreeRTOS/Source/portable/CCS/ARM_CM4F/port.d" "third_party/FreeRTOS/Source/portable/MemMang/heap_2.d" "utils/uartstdio.d" "utils/ustdlib.d" 
+	-$(RM) "third_party/FreeRTOS/Source/portable/CCS/ARM_CM4F/portasm.d" 
 	-@echo 'Finished clean'
+	-@echo ' '
+
+post-build:
+	-"/Applications/ti/ccs1010/ccs/utils/tiobj2bin/tiobj2bin" "sensor_demo.out" "sensor_demo.bin" "/Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/bin/armofd" "/Applications/ti/ccs1010/ccs/tools/compiler/ti-cgt-arm_20.2.1.LTS/bin/armhex" "/Applications/ti/ccs1010/ccs/utils/tiobj2bin/mkhex4bin"
 	-@echo ' '
 
 .PHONY: all clean dependents
